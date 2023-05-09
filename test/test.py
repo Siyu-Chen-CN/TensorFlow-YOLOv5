@@ -6,4 +6,3 @@ random = -1
 a = tf.random.normal([1, 2])
 print(a)
 a = 1
-
