@@ -2,38 +2,13 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 import tensorflow as tf
-from tensorflow.python.keras import layers, Sequential, losses, optimizers
+from tensorflow.python.keras import losses, optimizers
 # from tensorflow.python.tpu import datasets
 from keras import datasets
 
+from module import cifa100
+
 tf.random.set_seed(1234)
-
-conv_layers = [
-    # unit 1
-    layers.Conv2D(64, [3, 3], padding="same", activation=tf.nn.relu),
-    layers.Conv2D(64, [3, 3], padding="same", activation=tf.nn.relu),
-    layers.MaxPool2D(pool_size=[2, 2], strides=2, padding="same"),
-
-    # unit 2
-    layers.Conv2D(128, [3, 3], padding="same", activation=tf.nn.relu),
-    layers.Conv2D(128, [3, 3], padding="same", activation=tf.nn.relu),
-    layers.MaxPool2D(pool_size=[2, 2], strides=2, padding="same"),
-
-    # unit 3
-    layers.Conv2D(256, [3, 3], padding="same", activation=tf.nn.relu),
-    layers.Conv2D(256, [3, 3], padding="same", activation=tf.nn.relu),
-    layers.MaxPool2D(pool_size=[2, 2], strides=2, padding="same"),
-
-    # unit 4
-    layers.Conv2D(512, [3, 3], padding="same", activation=tf.nn.relu),
-    layers.Conv2D(512, [3, 3], padding="same", activation=tf.nn.relu),
-    layers.MaxPool2D(pool_size=[2, 2], strides=2, padding="same"),
-
-    # unit 5
-    layers.Conv2D(512, [3, 3], padding="same", activation=tf.nn.relu),
-    layers.Conv2D(512, [3, 3], padding="same", activation=tf.nn.relu),
-    layers.MaxPool2D(pool_size=[2, 2], strides=2, padding="same"),
-]
 
 
 def preprocess(x, y):
@@ -46,30 +21,16 @@ def preprocess(x, y):
 y = tf.squeeze(y, axis=1)
 y_test = tf.squeeze(y_test, axis=1)
 train_db = tf.data.Dataset.from_tensor_slices((x, y))
-train_db = train_db.shuffle(1000).map(preprocess).batch(64)
+train_db = train_db.shuffle(1000).map(preprocess).batch(128)
 
 test_db = tf.data.Dataset.from_tensor_slices((x_test, y_test))
 test_db = test_db.map(preprocess).batch(64)
 
 
 def main():
-    convNet = Sequential(conv_layers)
+    convNet, fcNet, variables = cifa100()
+    optimizer = optimizers.adam_v2.Adam(learning_rate=1e-4)
     
-    # x = tf.random.normal([10, 32, 32, 3])
-    # out = convNet(x)
-    # print(out.shape)
-    fcNet = Sequential([
-        layers.Dense(256, activation=tf.nn.relu),
-        layers.Dense(128, activation=tf.nn.relu),
-        layers.Dense(100, activation=None),     # 全连接层
-    ])
-
-    convNet.build(input_shape=[None, 32, 32, 3])
-    fcNet.build(input_shape=[None, 512])
-    optimizer = optimizers.adam_v2.Adam(lr=1e-4)
-
-    variables = convNet.trainable_variables + fcNet.trainable_variables
-
     for epoch in range(50):
         for step, (x, y) in enumerate(train_db):
             with tf.GradientTape() as tape:
@@ -87,7 +48,25 @@ def main():
 
             if step % 100 == 0:
                 print(epoch, step, 'loss:', float(loss))
+        total_num = 0
+        total_correct = 0
+        for step, (x, y) in enumerate(test_db):
+            with tf.GradientTape() as tape:
+                out = convNet(x)
+                out  = tf.reshape(out, [-1, 512])
+                logics = fcNet(out)
+                prob = tf.nn.softmax(logics, 1)
+                pred = tf.argmax(prob, 1)
+                pred = tf.cast(pred, tf.int32)
 
+                correct = tf.cast(tf.equal(pred, y), tf.int32)
+                correct = tf.reduce_sum(correct)
+
+                total_num += x.shape[0]
+                total_correct += int(correct)
+
+        acc = total_correct / total_num
+        print(epoch, 'acc:', acc)
 
 if __name__ == '__main__':
     main()
