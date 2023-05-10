@@ -13,13 +13,13 @@ anchors:
 # YOLOv5 v6.0 backbone
 backbone:
   # [from, number, module, args]
-  [[-1, 1, Conv2D, [64, [3, 3], padding="same", activation=tf.nn.relu]],
-   [-1, 1, Conv2D, [64, [3, 3], padding="same", activation=tf.nn.relu]],
-   [-1, 1, MaxPool2D, [pool_size=[2, 2], strides=2, padding="same"]],
+  [[Conv2D, [64, [3, 3], padding="same", activation=tf.nn.relu]],
+   [Conv2D, [64, [3, 3], padding="same", activation=tf.nn.relu]],
+   [MaxPool2D, [pool_size=[2, 2], strides=2, padding="same"]],
 
-   [-1, 1, Conv2D, [128, [3, 3], padding="same", activation=tf.nn.relu]],
-   [-1, 1, Conv2D, [128, [3, 3], padding="same", activation=tf.nn.relu]],
-   [-1, 1, MaxPool2D, [pool_size=[2, 2], strides=2, padding="same"]],
+   [Conv2D, [128, [3, 3], padding="same", activation=tf.nn.relu]],
+   [Conv2D, [128, [3, 3], padding="same", activation=tf.nn.relu]],
+   [MaxPool2D, [pool_size=[2, 2], strides=2, padding="same"]],
   ]
 
 # YOLOv5 v6.0 head
